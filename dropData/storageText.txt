@@ -1,0 +1,5 @@
+﻿userdata //用户登录相关数据
+scoreInfo //积分详情
+userId-equipmentId-equipment  //存取数据
+userId + '-Msg-' + v.userId  //存取消息数据
+//实打实大撒

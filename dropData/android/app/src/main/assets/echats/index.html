@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>指数详情</title>
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+      }
+      #main {
+        /* margin: 50px auto; */
+        width: 100%;
+        height: 100%;
+      }
+      .mask {
+        position: fixed;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.7);
+        /* z-index: 100000; */
+        top: 0;
+        left: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+      .mask .text {
+        color: #686868;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="main"></div>
+    <div class="mask">
+      <span>暂无数据</span>
+    </div>
+    <script src="https://cdn.bootcss.com/echarts/4.4.0-rc.1/echarts.min.js"></script>
+    <script>
+      window.onload = function() {
+        // 基于准备好的dom，初始化echarts实例
+        var myChart = echarts.init(document.getElementById('main'));
+        var chartsData = [];
+        window.document.addEventListener('message', function(res) {
+          let obj = JSON.parse(res.data);
+          let {type, data} = obj;
+          switch (type) {
+            case 'initialData':
+              chartsData = data;
+              initOption();
+              break;
+            default:
+              break;
+          }
+        });
+        // 绘制echats
+        function initOption() {
+          if (!chartsData || chartsData.length === 0) {
+            document.querySelector('.mask').style.display = 'flex';
+          } else {
+            document.querySelector('.mask').style.display = 'none';
+          }
+          var option = {
+            tooltip: {
+              trigger: 'axis',
+            },
+            xAxis: {
+              offset: 10,
+              data: chartsData.map(v => v[0]),
+            },
+            yAxis: {
+              splitLine: {
+                show: false,
+              },
+            },
+            dataZoom: [
+              //   {
+              //     startValue: '2014-06-01',
+              //   },
+              {
+                type: 'inside',
+              },
+            ],
+            visualMap: {
+              top: 10,
+              left: 'center',
+              orient: 'horizontal',
+              pieces: [
+                {
+                  gt: 0,
+                  lte: 50,
+                  label: '较差',
+                  color: '#E2463D',
+                },
+                {
+                  gt: 50,
+                  lte: 70,
+                  label: '一般',
+                  color: '#EEBB4F',
+                },
+                {
+                  gt: 70,
+                  lte: 90,
+                  label: '健康',
+                  color: '#38A9FC',
+                },
+                {
+                  gt: 90,
+
+                  label: '极好',
+                  color: '#55B569',
+                },
+              ],
+              outOfRange: {
+                color: '#ccc',
+              },
+            },
+            series: {
+              name: '检测分数',
+              type: 'line',
+              data: chartsData.map(v => v[1]),
+              markLine: {
+                silent: true,
+                lineStyle: {
+                  color: '#f60',
+                },
+                data: [
+                  {
+                    yAxis: 50,
+                  },
+                  {
+                    yAxis: 70,
+                  },
+                  {
+                    yAxis: 90,
+                  },
+                ],
+              },
+            },
+          };
+          // 使用刚指定的配置项和数据显示图表。
+          myChart.setOption(option);
+        }
+        // 过滤时间
+        function format(time) {
+          let newTime = new Date(time);
+          let year = newTime.getFullYear();
+          let month = newTime.getMonth() + 1;
+          let day = newTime.getDate();
+          return year + '-' + month + '-' + day;
+        }
+      };
+    </script>
+  </body>
+</html>

@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>数据</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        /* font-size: 14px; */
+        padding: 0;
+        margin: 0;
+      }
+      /* 搜索框 */
+      #search_box {
+        position: fixed;
+        left: 0;
+        top: 1.5rem;
+        width: 100%;
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        z-index: 1;
+      }
+      #search_box .box {
+        display: flex;
+        width: 86%;
+        border-radius: 4px;
+        background: #fff;
+        padding: 0 10px;
+        position: relative;
+      }
+      /* 下拉框 */
+      #search_box .select_box {
+        position: absolute;
+        top: 105%;
+        left: 0;
+        width: 100%;
+        max-height: 14rem;
+        overflow-y: auto;
+        background: #fff;
+        border-radius: 4px;
+      }
+      /* 下拉框选项 */
+      #search_box .select_box div {
+        line-height: 2.5rem;
+        height: 2.5rem;
+        border-bottom: 1px solid #f9f9f9;
+      }
+      #search_box .box input {
+        font-size: 1rem;
+        background: transparent;
+        border: none;
+        flex: 1;
+        outline: none;
+      }
+      #search_box .box button {
+        border: none;
+        background: #f4732d;
+        color: #fff;
+        border-radius: 4px;
+        margin: 5px 0 5px 10px;
+        outline: none;
+        padding: 5px 10px;
+      }
+      #container {
+        height: 100%;
+        width: 100%;
+      }
+      .amap-marker-content {
+        white-space: normal !important;
+      }
+      .map_text {
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 0 5px 3px rgba(0, 0, 0, 0.2);
+        border-radius: 14px;
+        border-bottom-left-radius: 0;
+        padding: 5px 10px;
+        width: 17.2rem;
+      }
+      /* 文字标签 */
+      .map_text .title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      /* 主账号标签 */
+      .map_text .badge {
+        padding: 2px 10px;
+        color: #f4732d;
+        border-radius: 10px;
+        background-color: #fff1ea;
+        font-size: 0.8rem;
+        margin-left: 10px;
+      }
+      /* 轨迹信息框 */
+      .track_text .track_time {
+        text-align: center;
+        color: #494949;
+        font-size: 0.9rem;
+      }
+      /* 地址 */
+      .address_box {
+        display: flex;
+        padding: 10px 0;
+        margin: 10px 0;
+        color: #f4732d;
+        font-size: 1.1rem;
+        border: 1px solid #ebebeb;
+        border-left: none;
+        border-right: none;
+      }
+      .address_box .text_address {
+        margin-left: 10px;
+        font-size: 0.9rem;
+      }
+      /* 数据 */
+      .data {
+        display: flex;
+        /* justify-content: space-evenly; */
+      }
+      .data div {
+        /* display: flex; */
+        text-align: center;
+        color: #353535;
+        width: 25%;
+        /* flex-direction: column;
+        justify-content: center; */
+      }
+      .data div p {
+        margin: 0 0 8px;
+        font-size: 0.9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .data div p span {
+        font-size: 12px;
+        transform: scale(0.5);
+      }
+      .data div .showTitle {
+        position: relative;
+        font-size: 0.9rem;
+      }
+      .data div .showTitle img {
+        position: absolute;
+        right: -16px;
+        bottom: 2px;
+        width: 16px;
+        height: 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- <button class="testBtn" type="button">交换</button> -->
+    <div id="search_box">
+      <div class="box">
+        <img
+          src="./icon_search.png"
+          alt="搜索"
+          width="16px"
+          height="16px"
+          style="margin-right: 10px;align-self: center;"
+        />
+        <input
+          type="text"
+          class="input"
+          maxlength="16"
+          placeholder="请输入用户名查找"
+        />
+        <button type="button" class="btn">搜索</button>
+        <div class="select_box" style="display: none;"></div>
+      </div>
+    </div>
+    <div id="container"></div>
+    <script
+      type="text/javascript"
+      src="https://webapi.amap.com/maps?v=1.4.15&key=ec8ddcfd19bf74b0f83b7a86cdb9c3ae"
+    ></script>
+    <script src="https://webapi.amap.com/ui/1.0/main.js?v=1.0.11"></script>
+    <!-- moment.js -->
+    <script src="https://unpkg.com/moment@2.24.0/min/moment.min.js"></script>
+    <script type="text/javascript">
+      window.onload = function() {
+        var familyArr = []; //家庭成员列表
+        var historyArr = []; //轨迹列表
+        var userId = ''; //用户ID 搜索用
+        var pathSimplifierIns = ''; //轨迹标识对象
+        var selectBut = 'location'; //按钮激活状态 location:实时位置  history:历史轨迹
+        var btn = document.querySelector('.btn'); //获取搜索按钮dom
+        var input = document.querySelector('.input'); //获取搜索input框dom
+        var selectBox = document.querySelector('.select_box'); //获取搜索select框dom
+
+        window.document.addEventListener('message', function(res) {
+          let obj = JSON.parse(res.data);
+          let {type, data} = obj;
+          switch (type) {
+            case 'initialData':
+              familyArr = data.familyArr;
+              historyArr = data.historyArr;
+              userId = data.userId;
+              renderLocation(data.userId);
+              break;
+            case 'change':
+              selectBut = data;
+              changeOption(data);
+              break;
+            case 'searchHistory':
+              historyArr = data;
+              showTrack();
+              break;
+            default:
+              break;
+          }
+        });
+        //   注册搜索按钮点击事件
+        btn.addEventListener('click', function() {
+          searchFn(true);
+        });
+        // 事件委托
+        selectBox.addEventListener('click', e => {
+          let uid = e.target.getAttribute('data-uid');
+          if (uid != 0) {
+            userId = uid;
+            input.value = e.target.innerText;
+          }
+          selectBox.style.display = 'none';
+          searchFn();
+        });
+        // input双向绑定
+        binding(input, val => {
+          dynamicSelect();
+        });
+        // 输入框获取焦点事件 下拉搜索框显示
+        input.addEventListener('focus', () => {
+          dynamicSelect();
+          selectBox.style.display = 'block';
+          window.ReactNativeWebView.postMessage(
+            JSON.stringify({type: 'inputFocus'}),
+          );
+        });
+        // 初始化地图
+        var map = new AMap.Map('container', {
+          zoom: 16, //级别
+          //   center: [116.397428, 39.90923], //中心点坐标
+          //   viewMode: '3D', //使用3D视图
+        });
+        //   初始化自定义窗口
+        var infoWindow = new AMap.InfoWindow({
+          isCustom: true,
+          anchor: 'bottom-left',
+          offset: new AMap.Pixel(20, -10),
+        });
+        // 加载点标记
+        // renderLocation(userId);
+        // showTrack();
+        // 显示头像点显示
+        function showMarker(data) {
+          let lnglat = [data.latitude, data.longitude];
+          //  逆地理编码
+          showAddress(lnglat, address => {
+            let marker = new AMap.Marker({
+              position: lnglat,
+              content: `<div style="width:50px;height:50px;">
+                <img style='border-radius:50%;' src="${
+                  //   './wo2.png'
+                  data.imageUrl ? data.imageUrl : './wo2.png'
+                }" width="100%" height="100%" alt="图标"/>
+                </div>`,
+              offset: new AMap.Pixel(-25, -25),
+              extData: {...data, address},
+            });
+            marker.on('touchstart', infoOpen);
+            map.add([marker]);
+          });
+        }
+
+        //   infowindow信息框打开隐藏
+        function infoOpen(e) {
+          if (infoWindow.getIsOpen()) {
+            infoWindow.close();
+            return;
+          }
+          let extData = e.target.B.extData;
+          let time = moment(extData.createTime).format('L'); //格式化时间
+          function showData(val) {
+            if (val > 0) {
+              return `<img src="./icon_up.png" alt="jiantou"/>`;
+            } else if (val < 0) {
+              return `<img src="./icon_down.png" alt="jiantou"/>`;
+            } else {
+              return '';
+            }
+          }
+          infoWindow.setContent(`<div class="map_text">
+                    <div class="title">
+                        <div style="display:flex;align-items: flex-end;">
+                            <span style='font-weight: bold;font-size:1.2rem'>${
+                              extData.name
+                            }</span>
+                            <img src="${
+                              extData.sex === 1
+                                ? './icon_man.png'
+                                : './icon_woman.png'
+                            }" style="align-self: flex-start" width="12px" alt="sex"/>
+                            <div class="badge">${
+                              extData.isMaster ? '主账号' : '成员'
+                            }</div>
+                        </div>
+                    <span style="color:#494949;font-size:0.9rem">${time}</span>
+                        </div>
+
+
+                    <div class="address_box">
+                            <img src="./map.png" width="14px" height="12px" alt=""/>
+                            <div class="text_address">${extData.address}</div>
+                    </div>
+                    <div class="data">
+                        <div>
+                            <p class="data_title">血氧<span>(Sa02)</span></p>
+                            <span class="showTitle">${
+                              extData.bloodOxygenConcentration
+                            }${showData(
+            extData.compare.bloodOxygenConcentration,
+          )}</span>
+                        </div>
+                        <div>
+                            <p class="data_title">心率<span>(次)</span></p>
+                            <span class="showTitle">${
+                              extData.heartRate
+                            }${showData(extData.compare.heartRate)}</span>
+                        </div>
+                        <div>
+                            <p class="data_title">温度<span>(℃)</span></p>
+                            <span class="showTitle">${
+                              extData.temperature
+                            }${showData(extData.compare.temperature)}</span>
+                        </div>
+                        <div>
+                            <p class="data_title">海拔<span>(m)</span></p>
+                            <span class="showTitle">${extData.height}${showData(
+            extData.compare.height,
+          )}</span>
+                        </div>
+                    </div>
+                </div>`);
+          infoWindow.open(map, e.target.getPosition());
+        }
+        //切换轨迹显示与头像定位显示
+        function changeOption(val) {
+          map.clearMap();
+          if (val === 'location') {
+            pathSimplifierIns && pathSimplifierIns.hide();
+            //实时位置
+            renderLocation(userId);
+          } else {
+            //轨迹查询
+            showTrack();
+          }
+        }
+        //切换轨迹显示与头像定位显示
+        function showTrack() {
+          let trackData = historyArr.map(v => [v.latitude, v.longitude]);
+          if (!trackData || trackData.length === 0) {
+            window.ReactNativeWebView.postMessage(
+              JSON.stringify({type: 'toast', data: '暂无轨迹信息'}),
+            );
+            return;
+          }
+          showMarker(historyArr[historyArr.length - 1]);
+          trackStart(historyArr[0]);
+          map.setCenter([historyArr[0].latitude, historyArr[0].longitude]);
+          AMapUI.load(['ui/misc/PathSimplifier', 'lib/$'], function(
+            PathSimplifier,
+            $,
+          ) {
+            if (!PathSimplifier.supportCanvas) {
+              alert('当前环境不支持 Canvas！');
+              return;
+            }
+
+            pathSimplifierIns = new PathSimplifier({
+              zIndex: 100,
+              autoSetFitView: false,
+              map: map, //所属的地图实例
+              getPath: function(pathData, pathIndex) {
+                return pathData.path;
+              },
+              renderOptions: {
+                renderAllPointsIfNumberBelow: 100, //绘制路线节点，如不需要可设置为-1
+                eventSupport: false,
+                pathNavigatorStyle: {
+                  pathLinePassedStyle: {
+                    lineWidth: 6,
+                  },
+                },
+              },
+            });
+            var myPath = trackData,
+              endIdx = 0,
+              data = [
+                {
+                  name: '动态路线',
+                  path: myPath.slice(0, 1),
+                },
+              ];
+            pathSimplifierIns.setData(data);
+
+            //对第一条线路（即索引 0）创建一个巡航器
+            var navg1 = pathSimplifierIns.createPathNavigator(0, {
+              //   loop: true, //循环播放
+              speed: 1000, //巡航速度，单位千米/小时
+            });
+            function expandPath() {
+              function doExpand() {
+                endIdx++;
+                if (endIdx >= myPath.length) {
+                  return false;
+                }
+
+                var cursor = navg1.getCursor().clone(), //保存巡航器的位置
+                  status = navg1.getNaviStatus();
+                data[0].path = myPath.slice(0, endIdx + 1);
+                pathSimplifierIns.setData(data); //延展路径
+
+                //重新建立一个巡航器
+                navg1 = pathSimplifierIns.createPathNavigator(0, {
+                  //loop: true, //循环播放
+                  speed: 500, //巡航速度，单位千米/小时
+                });
+
+                if (status !== 'stop') {
+                  navg1.start();
+                }
+
+                //恢复巡航器的位置
+                if (cursor.idx >= 0) {
+                  navg1.moveToPoint(cursor.idx, cursor.tail);
+                }
+
+                return true;
+              }
+
+              if (doExpand()) {
+                setTimeout(expandPath, 1000);
+              }
+            }
+
+            navg1.start();
+
+            expandPath();
+          });
+        }
+        //轨迹终点绘制
+        function trackStart(data) {
+          let lnglat = [data.latitude, data.longitude];
+          showAddress(lnglat, address => {
+            let marker = new AMap.Marker({
+              position: lnglat,
+              content: `
+                        <img src="./icon_start.png" width="32px" height='32px' alt="终点"/>
+                    `,
+              offset: new AMap.Pixel(-16, -32),
+              extData: {createTime: data.createTime, address},
+            });
+            marker.on('touchstart', e => {
+              if (infoWindow.getIsOpen()) {
+                infoWindow.close();
+                return;
+              }
+              let extData = e.target.B.extData;
+              let time = moment(extData.createTime).format('L'); //格式化时间
+              infoWindow.setContent(`<div class="map_text track_text">
+                <div class="track_time">${time}</div>
+                <div class="address_box">
+                            <img src="./map.png" width="14px" height="12px" alt=""/>
+                            <div class="text_address" style="border-bottom:none" >${extData.address}</div>
+                    </div>
+                </div>`);
+              infoWindow.open(map, e.target.getPosition());
+            });
+            map.add([marker]);
+          });
+        }
+        // 逆地理编码获取地址
+        function showAddress(lnglat, callback) {
+          AMap.plugin('AMap.Geocoder', () => {
+            var geocoder = new AMap.Geocoder({
+              // city 指定进行编码查询的城市，支持传入城市名、adcode 和 citycode
+              city: '010',
+            });
+            // var lnglat = [116.397428, 39.90923];
+            geocoder.getAddress(lnglat, function(status, result) {
+              if (status === 'complete' && result.info === 'OK') {
+                // result为对应的地理位置详细信息
+                callback && callback(result.regeocode.formattedAddress);
+              } else {
+                callback && callback('暂无该地理信息');
+              }
+            });
+          });
+        }
+        //搜索
+        function searchFn(searchFlag) {
+          selectBox.style.display = 'none';
+          if (!input.value) return;
+          if (selectBut === 'location') {
+            for (const v of familyArr) {
+              if (!searchFlag && userId == v.uid) {
+                map.setCenter([v.latitude, v.longitude]);
+                return;
+              } else if (searchFlag && input.value == v.name) {
+                userId = v.uid;
+                map.setCenter([v.latitude, v.longitude]);
+                return;
+              }
+            }
+          } else {
+            let params = {
+              type: 'searchHistory',
+              data: {userId: userId},
+            };
+            window.ReactNativeWebView.postMessage(JSON.stringify(params));
+          }
+        }
+        // 初始化数据
+        function renderLocation(uid) {
+          let center = [];
+          for (const v of familyArr) {
+            showMarker(v);
+            if (uid == v.uid) {
+              center = [v.latitude, v.longitude];
+            }
+          }
+          if (center.length > 0) {
+            map.setCenter(center);
+          }
+        }
+        // 动态添加select框
+        function dynamicSelect() {
+          let val = input.value;
+          let arr = [];
+          let str = '';
+          if (!val) {
+            arr = familyArr.map(v => ({name: v.name, uid: v.uid}));
+          } else {
+            arr = familyArr.filter(item => {
+              if (item.name.indexOf(val) !== -1) {
+                return {
+                  name: item.name,
+                  uid: item.uid,
+                };
+              }
+            });
+          }
+          if (arr.length > 0) {
+            arr.map((obj, ind) => {
+              str += `<div data-uid='${obj.uid}' style="${
+                ind === arr.length - 1 ? 'border-bottom : none' : ''
+              }" >${obj.name}</div>`;
+            });
+          } else {
+            str += `<div data-uid='0' style="border-bottom : none">暂无成员信息</div>`;
+          }
+          selectBox.innerHTML = str;
+        }
+        // 双向绑定
+        function binding(objDom, callback) {
+          var doing = false;
+          var bindObj = {}; //定义一个空对象 --双向绑定
+          var bindVal = ''; //赋予初始值 --双向绑定
+          Object.defineProperty(bindObj, 'bindVal', {
+            //定义要修改对象的属性
+            get: function() {
+              return bindVal;
+            },
+            set: function(newVal) {
+              bindVal = newVal; //定义val等于修改后的内容
+              objDom.value = bindVal;
+              callback && callback(bindVal);
+            },
+          });
+          objDom.addEventListener('compositionstart', function(e) {
+            doing = true;
+          });
+          objDom.addEventListener('input', function(e) {
+            if (!doing) {
+              bindObj.bindVal = e.target.value;
+            }
+          });
+          objDom.addEventListener('compositionend', function(e) {
+            doing = false;
+            bindObj.bindVal = e.target.value;
+          });
+        }
+      };
+    </script>
+  </body>
+</html>
